@@ -1,8 +1,9 @@
 import os
 import subprocess
+import shlex
 from mcp.server.fastmcp import FastMCP, Context
 
-# Create a vulnerable MCP server for Challenge 9: Remote Access Control
+# Create a secure MCP server for Challenge 9: Remote Access Control
 mcp = FastMCP("Challenge 9 - Remote Access Control")
 
 # Create a directory for network diagnostics logs
@@ -28,7 +29,7 @@ Available Tools:
 - network_diagnostic: Run comprehensive network diagnostics
 """
 
-# Add a vulnerable tool to ping a host
+# Secure ping host function
 @mcp.tool()
 def ping_host(host: str, count: int = 4) -> str:
     """Ping a host to check connectivity.
@@ -40,23 +41,22 @@ def ping_host(host: str, count: int = 4) -> str:
     Returns:
         The result of the ping command
     """
-    # VULNERABILITY: This tool passes user input directly to a shell command
-    # without proper validation, allowing command injection
-    
     try:
-        # Attempt at input validation (but insufficient)
+        # Input validation
         if not (0 < count <= 10):
             return "Error: Count must be between 1 and 10."
-        
-        # Vulnerable command construction
-        command = f"ping -c {count} {host}"
-        
-        # Execute the command
-        result = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
-        
+        if not isinstance(host, str) or not host:
+            return "Error: Invalid host."
+
+        # Securely construct the command
+        command = ["ping", "-c", str(count), host]
+
+        # Execute the command securely
+        result = subprocess.check_output(command, stderr=subprocess.STDOUT)
+
         # Log the command and result
         with open("/tmp/dvmcp_challenge9/logs/ping.log", "a") as f:
-            f.write(f"Command: {command}\n")
+            f.write(f"Command: {' '.join(command)}\n")
             f.write(f"Result: {result.decode()}\n")
             f.write("-" * 50 + "\n")
         
@@ -66,7 +66,7 @@ def ping_host(host: str, count: int = 4) -> str:
     except Exception as e:
         return f"Error: {str(e)}"
 
-# Add a vulnerable tool to trace the route to a host
+# Secure traceroute function
 @mcp.tool()
 def traceroute(host: str) -> str:
     """Trace the network route to a host.
@@ -77,19 +77,19 @@ def traceroute(host: str) -> str:
     Returns:
         The result of the traceroute command
     """
-    # VULNERABILITY: This tool passes user input directly to a shell command
-    # without proper validation, allowing command injection
-    
     try:
-        # Vulnerable command construction
-        command = f"traceroute {host}"
-        
-        # Execute the command
-        result = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
-        
+        if not isinstance(host, str) or not host:
+            return "Error: Invalid host."
+
+        # Securely construct the command
+        command = ["traceroute", host]
+
+        # Execute the command securely
+        result = subprocess.check_output(command, stderr=subprocess.STDOUT)
+
         # Log the command and result
         with open("/tmp/dvmcp_challenge9/logs/traceroute.log", "a") as f:
-            f.write(f"Command: {command}\n")
+            f.write(f"Command: {' '.join(command)}\n")
             f.write(f"Result: {result.decode()}\n")
             f.write("-" * 50 + "\n")
         
@@ -99,7 +99,7 @@ def traceroute(host: str) -> str:
     except Exception as e:
         return f"Error: {str(e)}"
 
-# Add a vulnerable tool to scan a port
+# Secure port scan function
 @mcp.tool()
 def port_scan(host: str, port: int) -> str:
     """Check if a specific port is open on a host.
@@ -111,20 +111,19 @@ def port_scan(host: str, port: int) -> str:
     Returns:
         Whether the port is open or closed
     """
-    # VULNERABILITY: This tool passes user input directly to a shell command
-    # without proper validation, allowing command injection
-    
     try:
-        # Attempt at input validation (but insufficient)
+        # Input validation
         if not (0 <= port <= 65535):
             return "Error: Port must be between 0 and 65535."
+        if not isinstance(host, str) or not host:
+            return "Error: Invalid host."
         
-        # Vulnerable command construction using nc (netcat)
-        command = f"nc -zv -w 2 {host} {port}"
-        
-        # Execute the command
+        # Securely construct the command
+        command = ["nc", "-zv", "-w", "2", host, str(port)]
+
+        # Execute the command securely
         try:
-            result = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
+            result = subprocess.check_output(command, stderr=subprocess.STDOUT)
             status = "open"
         except subprocess.CalledProcessError as e:
             result = e.output
@@ -132,7 +131,7 @@ def port_scan(host: str, port: int) -> str:
         
         # Log the command and result
         with open("/tmp/dvmcp_challenge9/logs/portscan.log", "a") as f:
-            f.write(f"Command: {command}\n")
+            f.write(f"Command: {' '.join(command)}\n")
             f.write(f"Result: {result.decode()}\n")
             f.write("-" * 50 + "\n")
         
@@ -140,12 +139,10 @@ def port_scan(host: str, port: int) -> str:
     except Exception as e:
         return f"Error: {str(e)}"
 
-# Add a highly vulnerable tool for comprehensive network diagnostics
+# Secure network diagnostic function
 @mcp.tool()
 def network_diagnostic(target: str, options: str = "") -> str:
     """Run comprehensive network diagnostics on a target.
-    
-    This tool runs multiple network diagnostic commands on the specified target.
     
     Args:
         target: The hostname or IP address to diagnose
@@ -154,14 +151,16 @@ def network_diagnostic(target: str, options: str = "") -> str:
     Returns:
         The results of the network diagnostic
     """
-    # VULNERABILITY: This tool passes user input directly to a shell command
-    # and even allows specifying additional options, making command injection trivial
-    
     try:
-        # Construct the diagnostic command
-        # This is EXTREMELY vulnerable as it directly passes user input to the shell
-        # including arbitrary options
-        command = f"./network_diagnostic.sh {target} {options}"
+        if not isinstance(target, str) or not target:
+            return "Error: Invalid target."
+        if options and not isinstance(options, str):
+            return "Error: Invalid options."
+
+        # Securely construct the command
+        command = ["./network_diagnostic.sh", target]
+        if options:
+            command += shlex.split(options)
         
         # Create the diagnostic script if it doesn't exist
         script_path = "./network_diagnostic.sh"
@@ -185,12 +184,12 @@ echo "Diagnostics completed."
 """)
             os.chmod(script_path, 0o755)
         
-        # Execute the command
-        result = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
-        
+        # Execute the command securely
+        result = subprocess.check_output(command, stderr=subprocess.STDOUT)
+
         # Log the command and result
         with open("/tmp/dvmcp_challenge9/logs/diagnostic.log", "a") as f:
-            f.write(f"Command: {command}\n")
+            f.write(f"Command: {' '.join(command)}\n")
             f.write(f"Result: {result.decode()}\n")
             f.write("-" * 50 + "\n")
         
