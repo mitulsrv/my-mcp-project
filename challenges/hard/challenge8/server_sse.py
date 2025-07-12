@@ -3,11 +3,12 @@ from mcp.server.sse import SseServerTransport
 from starlette.applications import Starlette
 from starlette.routing import Mount, Route
 from fastapi import FastAPI
+import re
 
-# Create a vulnerable MCP server for Challenge 8: Malicious Code Execution with SSE support
+# Create a secure MCP server for Challenge 8: Malicious Code Execution with SSE support
 class Challenge8Server:
     def __init__(self):
-        self.name = "Challenge 8 - Malicious Code Execution"
+        self.name = "Challenge 8 - Secure Code Execution"
         self.port = 9008  # Changed from 8008 to avoid conflicts
         self.mcp = FastMCP(self.name)
         self.app = FastAPI()
@@ -20,10 +21,13 @@ class Challenge8Server:
             Args:
                 expression: The mathematical expression to evaluate (e.g., "2 + 2 * 3")
             """
-            # Vulnerable: using eval() on user input
+            # Validate that the expression contains only safe characters (numbers, operators, and whitespace)
+            if not self.is_valid_expression(expression):
+                return "Error: Invalid expression"
+
             try:
-                # Extremely dangerous - allows arbitrary code execution
-                result = eval(expression)
+                # Use eval with restricted globals and locals
+                result = eval(expression, {"__builtins__": None}, {})
                 return f"Result: {result}"
             except Exception as e:
                 return f"Error evaluating expression: {str(e)}"
@@ -37,10 +41,11 @@ class Challenge8Server:
                 language: The programming language (python, javascript, etc.)
                 task: Description of what the code should do
             """
-            # Vulnerable: doesn't properly validate inputs
+            # Validate inputs to prevent potential injection
+            language = language.lower()
+            task = re.sub(r'[<>]', '', task)  # Simple sanitization to remove harmful characters
             
-            if language.lower() == "python":
-                # Vulnerable to injection in the task parameter
+            if language == "python":
                 return f"""
                 # Python example for: {task}
                 
@@ -54,7 +59,7 @@ class Challenge8Server:
                 if __name__ == "__main__":
                     solution()
                 """
-            elif language.lower() == "javascript":
+            elif language == "javascript":
                 return f"""
                 // JavaScript example for: {task}
                 
@@ -73,6 +78,12 @@ class Challenge8Server:
         # Mount the SSE server
         self.mount_sse_server()
     
+    def is_valid_expression(self, expression: str) -> bool:
+        """Validates the mathematical expression to prevent code injection"""
+        # Check if expression contains only valid characters (digits, operators, whitespace)
+        pattern = re.compile(r'^[\d\ +\-\*/\(\)]+$')
+        return bool(pattern.match(expression))
+
     def mount_sse_server(self):
         """Mount the SSE server to the FastAPI app"""
         self.app.mount("/", self.create_sse_server())
