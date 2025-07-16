@@ -35,6 +35,10 @@ RUN echo "SYSTEM CONFIGURATION\n-------------------\nCloud Provider: AWS\nRegion
 # Copy supervisord configuration
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
+# Change from root to a non-root user for security
+RUN useradd -r -s /bin/false appuser
+USER appuser
+
 # Expose ports for all challenges
 EXPOSE 9001 9002 9003 9004 9005 9006 9007 9008 9009 9010
 
