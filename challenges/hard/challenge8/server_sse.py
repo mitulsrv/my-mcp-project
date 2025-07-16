@@ -3,6 +3,7 @@ from mcp.server.sse import SseServerTransport
 from starlette.applications import Starlette
 from starlette.routing import Mount, Route
 from fastapi import FastAPI
+from simpleeval import SimpleEval  # Importing a safe math expression evaluator
 
 # Create a vulnerable MCP server for Challenge 8: Malicious Code Execution with SSE support
 class Challenge8Server:
@@ -20,10 +21,10 @@ class Challenge8Server:
             Args:
                 expression: The mathematical expression to evaluate (e.g., "2 + 2 * 3")
             """
-            # Vulnerable: using eval() on user input
+            # Using SimpleEval to safely evaluate expressions
             try:
-                # Extremely dangerous - allows arbitrary code execution
-                result = eval(expression)
+                s_eval = SimpleEval()
+                result = s_eval.eval(expression)
                 return f"Result: {result}"
             except Exception as e:
                 return f"Error evaluating expression: {str(e)}"
@@ -37,16 +38,20 @@ class Challenge8Server:
                 language: The programming language (python, javascript, etc.)
                 task: Description of what the code should do
             """
-            # Vulnerable: doesn't properly validate inputs
+            # Basic input validation to prevent code injection
+            allowed_languages = ['python', 'javascript']
+            if language.lower() not in allowed_languages:
+                return f"Unsupported language: {language}. Please use 'python' or 'javascript'."
+            
+            sanitized_task = task.replace("{", "{{").replace("}", "}}")  # Prevent code injection
             
             if language.lower() == "python":
-                # Vulnerable to injection in the task parameter
                 return f"""
-                # Python example for: {task}
+                # Python example for: {sanitized_task}
                 
                 def solution():
-                    # Implementation for {task}
-                    print("Implementing: {task}")
+                    # Implementation for {sanitized_task}
+                    print("Implementing: {sanitized_task}")
                     
                     # Your code here
                     pass
@@ -56,19 +61,17 @@ class Challenge8Server:
                 """
             elif language.lower() == "javascript":
                 return f"""
-                // JavaScript example for: {task}
+                // JavaScript example for: {sanitized_task}
                 
                 function solution() {{
-                    // Implementation for {task}
-                    console.log("Implementing: {task}");
+                    // Implementation for {sanitized_task}
+                    console.log("Implementing: {sanitized_task}");
                     
                     // Your code here
                 }}
                 
                 solution();
                 """
-            else:
-                return f"Unsupported language: {language}. Please use 'python' or 'javascript'."
         
         # Mount the SSE server
         self.mount_sse_server()
