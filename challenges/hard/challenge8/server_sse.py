@@ -3,8 +3,9 @@ from mcp.server.sse import SseServerTransport
 from starlette.applications import Starlette
 from starlette.routing import Mount, Route
 from fastapi import FastAPI
+import ast
 
-# Create a vulnerable MCP server for Challenge 8: Malicious Code Execution with SSE support
+# Create a secure MCP server for Challenge 8: Malicious Code Execution with SSE support
 class Challenge8Server:
     def __init__(self):
         self.name = "Challenge 8 - Malicious Code Execution"
@@ -12,7 +13,7 @@ class Challenge8Server:
         self.mcp = FastMCP(self.name)
         self.app = FastAPI()
         
-        # Add a tool that evaluates mathematical expressions
+        # Add a tool that evaluates mathematical expressions securely
         @self.mcp.tool()
         def evaluate_expression(expression: str) -> str:
             """Evaluate a mathematical expression and return the result
@@ -20,11 +21,13 @@ class Challenge8Server:
             Args:
                 expression: The mathematical expression to evaluate (e.g., "2 + 2 * 3")
             """
-            # Vulnerable: using eval() on user input
+            # Secure evaluation of a mathematical expression
             try:
-                # Extremely dangerous - allows arbitrary code execution
-                result = eval(expression)
-                return f"Result: {result}"
+                node = ast.literal_eval(expression)
+                if isinstance(node, (int, float)):
+                    return f"Result: {node}"
+                else:
+                    return "Error: Expression must evaluate to a number."
             except Exception as e:
                 return f"Error evaluating expression: {str(e)}"
         
@@ -37,16 +40,19 @@ class Challenge8Server:
                 language: The programming language (python, javascript, etc.)
                 task: Description of what the code should do
             """
-            # Vulnerable: doesn't properly validate inputs
-            
+            # Ensure only safe predefined tasks are allowed
+            safe_tasks = {"calculate_sum": "Calculate the sum of two numbers", 
+                          "print_hello": "Print Hello World"}
+            if task not in safe_tasks:
+                return "Error: Task is not allowed."
+                
             if language.lower() == "python":
-                # Vulnerable to injection in the task parameter
                 return f"""
                 # Python example for: {task}
                 
                 def solution():
-                    # Implementation for {task}
-                    print("Implementing: {task}")
+                    # Implementation for {safe_tasks[task]}
+                    print("Implementing: {safe_tasks[task]}")
                     
                     # Your code here
                     pass
@@ -59,8 +65,8 @@ class Challenge8Server:
                 // JavaScript example for: {task}
                 
                 function solution() {{
-                    // Implementation for {task}
-                    console.log("Implementing: {task}");
+                    // Implementation for {safe_tasks[task]}
+                    console.log("Implementing: {safe_tasks[task]}");
                     
                     // Your code here
                 }}
